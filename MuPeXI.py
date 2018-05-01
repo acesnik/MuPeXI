@@ -55,7 +55,7 @@ def main(args):
 
     variant_caller = detect_variant_caller(input_.vcf_file, input_.webserver)
     vcf_file = liftover_hg19(input_.liftover, input_.webserver, input_.vcf_file, input_.keep_temp, input_.outdir, input_.prefix, tmp_dir, input_.config)
-    vcf_sorted_file = create_vep_compatible_vcf(vcf_file, input_.webserver, input_.keep_temp, input_.outdir, input_.prefix, tmp_dir, input_.liftover)
+    vcf_sorted_file = vcf_file # create_vep_compatible_vcf(vcf_file, input_.webserver, input_.keep_temp, input_.outdir, input_.prefix, tmp_dir, input_.liftover)
     allele_fractions = extract_allele_frequency(vcf_sorted_file, input_.webserver, variant_caller)
     vep_file = run_vep(vcf_sorted_file, input_.webserver, tmp_dir, paths.vep_path, paths.vep_dir, input_.keep_temp, input_.prefix, input_.outdir, input_.assembly, input_.fork, species)
     vep_info, vep_counters, transcript_info, protein_positions = build_vep_info(vep_file, input_.webserver)
@@ -414,7 +414,7 @@ def detect_variant_caller(vcf_file, webserver):
     print_ifnot_webserver('\tDetecting variant caller', webserver)
     with open(vcf_file) as f:
         for line in f.readlines():
-            if any(ids in line for ids in ['ID=MuTect2,', 'ID=Mutect2,']):
+            if 'ID=MuTect2,' in line:
                 variant_caller = 'MuTect2'
                 print_ifnot_webserver('\t\tMuTect2', webserver)
                 break
@@ -528,12 +528,13 @@ def run_vep(vcf_sorted_file, webserver, tmp_dir, vep_path, vep_dir, keep_tmp, fi
     popen_args = [
         vep_path, 
         '-fork', str(fork), 
-        '--offline', 
-        '--quiet', 
+        '--format', 'vcf',
+	'--offline',
+	'--quiet', 
         '--assembly', assembly, 
         '--species', species.species, 
         '--dir', vep_dir, 
-        '-i', vcf_sorted_file.name, 
+        '-i', vcf_sorted_file, 
         '--force_overwrite',
         '--symbol', # print gene symbol in output  
         '-o', vep_file.name]
@@ -1140,7 +1141,7 @@ def run_netMHCpan(HLA_alleles, netMHCpan_path, peptide_file, tmp_dir, webserver,
 
 def build_netMHC(netMHC_file, webserver, affinity):
     netmhc_anal = 'binding affinity prediction' if affinity == 'YES' else 'eluted ligand prediction'
-    print_ifnot_webserver('\tCreating NetMHCpan {} file dictionary'.format(netmhc_anal), webserver)
+    print('\tCreating NetMHCpan {} file dictionary'.format(netmhc_anal))
     net_mhc = defaultdict(dict) # empty dictionary
     NetMHCInfo = namedtuple('NetMHCInfo', ['affinity', 'rank', 'score'])
 
@@ -1616,7 +1617,7 @@ def webserver_print_output(webserver, www_tmp_dir, output, logfile, fasta_file_n
        print '\nLink to MuPeXI output file <a href="/services/MuPeXI-1.1/tmp/{}/{}">MuPeXI.out</a>\n'.format(dir_name, output)
        print 'Link to MuPeXI log file <a href="/services/MuPeXI-1.1/tmp/{}/{}">MuPeXI.log</a>\n'.format(dir_name, logfile)
        if not fasta_file_name == None:
-          print 'Link to Fasta file with peptide info <a href="/usr/opt/www/pub/CBS/services/MuPeXI-1.1/tmp/{}/{}">Fasta file</a>\n'.format(dir_name, fasta_file_name)
+          print 'Link to Fasta file with peptide info <a href="/services/MuPeXI-1.1/tmp/{}/{}">Fasta file</a>\n'.format(dir_name, fasta_file_name)
 
 
 
